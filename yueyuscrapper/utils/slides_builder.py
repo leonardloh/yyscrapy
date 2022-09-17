@@ -27,22 +27,45 @@ class SlidesBuilder:
         self.df = dataframe
     
     def buildSlides(self):
-        prs = Presentation('template.pptx')
+        
 
         collection = self.df.iloc[0, 0]
         name = self.df.iloc[0, 1]
         price = self.df.iloc[0, 2]
         img_link = self.df.iloc[0, 3]
         img_path = request_and_save_image(name, img_link)
-        slide1 = prs.slides.add_slide(prs.slide_layouts[0])
 
-        for shape in slide1.placeholders:
-            print('%d %s' % (shape.placeholder_format.idx, shape.name))
+        prs = Presentation('template.pptx')
+        collection_layout = prs.slide_layouts[0]
+        catalogue_layout= prs.slide_layouts[1]
+
+        coll_slide = prs.slides.add_slide(collection_layout)
+        cat_slide = prs.slides.add_slide(catalogue_layout)
+
+        for shape in coll_slide.placeholders:
+            if shape.is_placeholder:
+                #  print(f'{shape.placeholder_format.idx, shape.name, shape.placeholder_format.type}')
+                shape.text = collection
+
+        is_name = True
+        for shape in cat_slide.placeholders:
+            if shape.is_placeholder:
+                # print(f'{shape.placeholder_format.idx, shape.name, shape.placeholder_format.type}')
+                placeholder_type = shape.placeholder_format.type
+                # if image
+                if placeholder_type == 18:
+                    shape.insert_picture(img_path)
+                elif is_name:
+                    shape.text = name
+                    is_name =  False
+                else:
+                    shape.text = price
+                    is_name = True
 
 
-        slide1.placeholders[10].insert_picture(img_path)
-        slide1.placeholders[11].text = name
-        slide1.placeholders[12].text = price
+        # cat_slide.placeholders[10].insert_picture(img_path)
+        # cat_slide.placeholders[11].text = name
+        # cat_slide.placeholders[12].text = price
 
 
 
