@@ -1,0 +1,5 @@
+itemadapter==0.7.0
+pandas==1.5.2
+requests==2.27.1
+scrapy==2.7.1
+python-pptx==0.6.21
