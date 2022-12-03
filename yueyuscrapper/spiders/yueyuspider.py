@@ -1,9 +1,8 @@
 from distutils.command.clean import clean
 import scrapy
 
-
 def clean_price_str(in_str):
-    return in_str.replace('\n', '').replace(' ','')
+    return in_str.replace('\n', '').replace(' ','').replace('MYR', '')
 
 class YueYuSpider(scrapy.Spider):
     name = 'yueyu'

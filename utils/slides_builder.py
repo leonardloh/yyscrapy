@@ -1,5 +1,5 @@
 from pptx import Presentation
-from pptx.util import Inches
+import re
 
 from pathlib import Path
 import requests
@@ -7,10 +7,15 @@ import shutil
 import pandas as pd
 import math
 
+def find_file_name(url):
+    return re.findall(r'(\w+.\w+)\?', url)[0]
 
-def request_and_save_image(img_name, url, img_folder='images'):
+def request_and_save_image(url, img_folder='images'):
+    file_name = find_file_name(url)
+    file_path_name = f'{img_folder}/{file_name}'
+    if Path(file_path_name).exists():
+        return file_path_name
     res = requests.get(url, stream = True)
-    file_path_name = f'{img_folder}/{img_name}.jpg'
     if res.status_code == 200:
         with open(file_path_name, 'wb') as f:
             shutil.copyfileobj(res.raw, f)
@@ -26,16 +31,11 @@ class SlidesBuilder:
         prs = Presentation(self.template_path)
         ITEMS_PER_SLIDE = 8
 
-        name = self.df.iloc[0, 1]
-        price = self.df.iloc[0, 2]
-        img_link = self.df.iloc[0, 3]
-        img_path = request_and_save_image(name, img_link)
-
         for collection_name, data in self.df.groupby('collection'):
             grouped_df = pd.DataFrame(data)
             names = grouped_df['name'].to_list()
             prices = grouped_df['price'].to_list()
-            images = grouped_df['img'].to_list()
+            image_links = grouped_df['img'].to_list()
             total_item_count = len(grouped_df)
             number_collection_slides = math.ceil(total_item_count / ITEMS_PER_SLIDE)
 
@@ -44,8 +44,11 @@ class SlidesBuilder:
             coll_slide = prs.slides.add_slide(collection_layout)
             for shape in coll_slide.placeholders:
                 if shape.is_placeholder:
-                    #  print(f'{shape.placeholder_format.idx, shape.name, shape.placeholder_format.type}')
                     shape.text = collection_name
+
+            image_shape_list = list()  # list of image of each slide len(image_shape_list) == ITEMS_PER_SLIDE
+            name_shape_list = list()
+            price_shape_list = list()
 
             # individual catalogue layout 
             for slide in range(number_collection_slides):
@@ -57,13 +60,21 @@ class SlidesBuilder:
                     if shape.is_placeholder:
                         placeholder_type = shape.placeholder_format.type
                         if placeholder_type == 18:
-                            shape.insert_picture(img_path)
+                            image_shape_list.append(shape)
                         elif is_name:
-                            shape.text = name
+                            name_shape_list.append(shape)
                             is_name =  False
                         else:
-                            shape.text = price
+                            price_shape_list.append(shape)
                             is_name = True
 
+            for i, name in enumerate(names):
+                price = prices[i]
+                image_link = image_links[i]
+                img_path = request_and_save_image(url=image_link)
+                print(f"PROCESSING: {name}, {price}, {img_path}")
+                image_shape_list[i].insert_picture(img_path)
+                name_shape_list[i].text = name
+                price_shape_list[i].text = price
 
-        prs.save('test.pptx')
+        prs.save('products.pptx')
